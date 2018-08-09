@@ -1,10 +1,18 @@
 class TasksController < ApplicationController
+  before_action :correct_user, only: [:edit, :destroy]
+  before_action :require_user_logged_in, only: [:index, :show]
+
   def index
-    @tasks = Task.all.page(params[:page]).per(10)
+    if logged_in?
+      # ログインユーザのIDで登録されたタスクのみを表示
+      @user = current_user
+      @tasks = current_user.tasks.order('created_at DESC').page(params[:page]).per(10)
+    end
   end
 
   def create
-    @task = Task.new(task_params)
+    # ログインユーザのIDでタスクを作成する
+    @task = current_user.tasks.build(task_params)
     
     if @task.save
       flash[:success] = 'タスクが正常に登録されました'
@@ -52,5 +60,12 @@ class TasksController < ApplicationController
   # Strong Parameter
   def task_params
     params.require(:task).permit(:content,:status)
+  end
+
+  def correct_user
+    @task = current_user.tasks.find_by(id: params[:id])
+    unless @task
+      redirect_to root_url
+    end
   end
 end
